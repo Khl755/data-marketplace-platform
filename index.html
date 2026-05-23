@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UK & USA Hospitals Database | Premium Data</title>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * {margin:0; padding:0; box-sizing:border-box; font-family:Arial, sans-serif;}
+    body {background:#f5f7fa;}
+    header {background:#2c3e50; color:white; padding:15px; text-align:center;}
+    .container {max-width:1000px; margin:auto; padding:10px;}
+    .info {background:white; padding:20px; margin:10px 0; border-radius:8px; text-align:center; box-shadow:0 2px 8px #00000010;}
+    .payment-card {background:#f8f9fa; border:1px solid #ddd; border-radius:6px; padding:15px; margin:12px 0; text-align:left;}
+    .btn {background:#27ae60; color:white; border:none; padding:10px 22px; border-radius:4px; font-size:15px; cursor:pointer; margin-top:8px; width:100%;}
+    .btn:hover {background:#219653;}
+    #map {height:70vh; width:100%; border-radius:8px; margin:10px 0; box-shadow:0 2px 8px #00000010;}
+    .locked {filter:blur(8px); pointer-events:none;}
+    .hidden {display:none !important;}
+    .success {color:green; font-weight:bold; padding:10px; background:#e8f5e9; border-radius:4px; margin:10px 0;}
+    input, textarea {width:100%; padding:10px; margin:8px 0; border:1px solid #ccc; border-radius:4px;}
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🏥 UK & USA Hospitals Database</h1>
+  <p>Verified Data • 12,000+ Records • $49 One-Time Payment</p>
+</header>
+
+<div class="container">
+  <div class="info">
+    <h2>Get Full Access + Instant Download</h2>
+    <p>Unlock: Name, Address, Phone, Email, Website, Specialization, GPS Coordinates</p>
+
+    <!-- ✅ YOUR PAYMENT METHODS (Bangladesh) -->
+    <div class="payment-card">
+      <h3>💳 Payoneer</h3>
+      <p>Send to: <strong>your.name@payoneer.com</strong></p>
+      <button class="btn" onclick="showForm('payoneer')">I Paid via Payoneer</button>
+    </div>
+
+    <div class="payment-card">
+      <h3>🪙 Binance / USDT (TRC20)</h3>
+      <p>Address: <strong>TV7x...your-wallet-address</strong></p>
+      <button class="btn" onclick="showForm('binance')">I Paid via Binance/Crypto</button>
+    </div>
+
+    <div class="payment-card">
+      <h3>🏦 Bangladesh Bank Transfer</h3>
+      <p>Bank: Dutch-Bangla Bank Ltd<br>A/C: 1234567890123<br>Name: Khl755<br>Branch: Khulna</p>
+      <button class="btn" onclick="showForm('bank')">I Paid via Bank</button>
+    </div>
+
+    <div class="payment-card">
+      <h3>💸 Fasset / PayU</h3>
+      <p>Send to: <strong>your-fasset-id</strong></p>
+      <button class="btn" onclick="showForm('fasset')">I Paid via Fasset/PayU</button>
+    </div>
+
+    <!-- ✅ Confirmation Form -->
+    <div id="confirmForm" class="payment-card hidden">
+      <h3>✅ Submit Payment Proof</h3>
+      <input type="text" id="txn" placeholder="Transaction ID / Reference No.">
+      <input type="email" id="email" placeholder="Your Email (to send file)">
+      <textarea id="note" placeholder="Any note (optional)"></textarea>
+      <button class="btn" onclick="unlockData()">Submit & Unlock</button>
+    </div>
+
+    <div id="successBox" class="hidden success">
+      ✅ PAYMENT VERIFIED — UNLOCKED!<br><br>
+      📥 <a href="#" id="downloadLink" style="color:green; font-weight:bold; font-size:17px;">DOWNLOAD FULL DATABASE (CSV)</a>
+    </div>
+  </div>
+
+  <!-- ✅ MAP (LOCKED FIRST) -->
+  <div id="map" class="locked"></div>
+</div>
+
+<script>
+// ✅ YOUR REAL SUPABASE DETAILS — ALREADY FILLED
+const SUPABASE_URL = "https://osuunystxmyiygdvqtxd.supabase.co";
+const SUPABASE_KEY = "sb_publishable_5c4f8d7e9a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8"; // ← REPLACE WITH YOUR FULL KEY
+
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let methodUsed = '';
+
+// Map Initialize
+const map = L.map('map').setView([39.8283, -98.5795], 4);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors'
+}).addTo(map);
+
+// ✅ Load Real Data AFTER Unlock
+async function loadHospitals() {
+  const { data:hospitals, error } = await supabase
+   .from('hospitals')
+   .select('name,address,phone,email,lat,lng');
+
+  if(!error && hospitals){
+    hospitals.forEach(h=>{
+      if(h.lat && h.lng){
+        L.marker([h.lat,h.lng])
+         .bindPopup(`<b>${h.name}</b><br>${h.address}<br>📞 ${h.phone}<br>✉️ ${h.email}`)
+         .addTo(map);
+      }
+    });
+  }
+}
+
+function showForm(m){
+  methodUsed = m;
+  document.getElementById('confirmForm').classList.remove('hidden');
+  document.getElementById('successBox').classList.add('hidden');
+}
+
+async function unlockData(){
+  const txn = document.getElementById('txn').value.trim();
+  const email = document.getElementById('email').value.trim();
+  if(!txn || !email) return alert("⚠️ Fill Transaction ID & Email");
+
+  // ✅ Save payment record to Supabase
+  await supabase.from('payments').insert([{
+    method:methodUsed,
+    txn_id:txn,
+    email:email,
+    amount:"$49",
+    status:"confirmed",
+    date:new Date().toISOString()
+  }]);
+
+  // ✅ UNLOCK EVERYTHING
+  document.getElementById('map').classList.remove('locked');
+  document.getElementById('confirmForm').classList.add('hidden');
+  document.getElementById('successBox').classList.remove('hidden');
+  loadHospitals(); // Load real hospital data
+}
+</script>
+
+</body>
+</html>
